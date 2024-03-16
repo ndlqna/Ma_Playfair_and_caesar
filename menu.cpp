@@ -1,288 +1,151 @@
-#include "windows.h"
-#include <iostream>
-#include <conio.h>
-#include <math.h>
-#include <vector>
-#include <algorithm>
+#include <bits/stdc++.h>
 
 using namespace std;
 
-#ifdef WIN32
-void gotoxy(int x, int y)
+typedef struct{
+    int hang; // Hàng của vị trí trong ma trận
+    int cot; // Cột của vị trí trong ma trận
+}viTri;
+
+char matran[5][5]; // Biến toàn cục lưu trữ ma trận 5x5
+
+// Hàm tạo ma trận từ khóa nhập vào
+void taoMatran(string khoa)
 {
-  COORD cur = {x, y};
-  SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), cur);
-} 
-#else
-void gotoxy(int x, int y)
-{
-  printf("\033[%dG\033[%dd", x+1, y+1);
+    int coDau[26] = {0}; // Mảng đánh dấu ký tự đã xuất hiện
+    int x = 0, y = 0; // Vị trí hiện tại trong ma trận
+    for(int i=0; i<khoa.length(); i++)
+    {
+        if(khoa[i] == 'j') khoa[i] = 'i'; // thay j bằng i
+        if(coDau[khoa[i]-'a'] == 0) // Nếu ký tự chưa xuất hiện
+        {
+            matran[x][y++] = khoa[i]; // Thêm ký tự vào ma trận
+            coDau[khoa[i]-'a'] = 1; // Đánh dấu ký tự đã xuất hiện
+        }
+        if(y==5) x++, y=0; // Nếu đến cuối hàng, sang hàng mới
+    }
+    for(char ch = 'a'; ch <= 'z'; ch++)
+    {
+        if(ch == 'j') continue; // không điền j vì j đã được thay bằng i
+        if(coDau[ch - 'a'] == 0) // Nếu ký tự chưa xuất hiện
+        {
+            matran[x][y++] = ch; // Thêm ký tự vào ma trận
+            coDau[ch - 'a'] = 1 ; // Đánh dấu ký tự đã xuất hiện
+        }
+        if(y==5) x++, y=0; // Nếu đến cuối hàng, sang hàng mới
+    }
 }
-#endif
 
-int textcolor(int Color)
+// Hàm điều chỉnh bản mã để chuẩn bị mã hóa
+string dieuChinhBanMa(string banMa)
 {
-  HANDLE h;
-  h = GetStdHandle(STD_OUTPUT_HANDLE); 
-  return SetConsoleTextAttribute(h, Color);
+    for(int i=0; i<banMa.length(); i++)
+    {
+        if(banMa[i] == 'j') banMa[i] = 'i'; // thay j bằng i
+    }
+    for(int i=1; i<banMa.length(); i+=2)
+    {
+        if(banMa[i-1] == banMa[i]) banMa.insert(i, "X"); // Thêm 'X' vào giữa 2 ký tự giống nhau
+    }
+    if(banMa.length()%2 != 0) banMa += "X"; // Nếu độ dài bản mã lẻ, thêm 'X' vào cuối
+    return banMa;
 }
 
-#define CYAN 10
-#define YELLOW 14
-//n
-
-//Playpair
-vector<char> create_playfair_matrix(string key) {
-    string alphabet = "ABCDEFGHIKLMNOPQRSTUVWXYZ";
-    vector<char> matrix(25);
-    key.erase(remove(key.begin(), key.end(), 'J'), key.end());
-    key += alphabet;
-
-    int k = 0;
-    for (size_t i = 0; i < key.length(); ++i) {
-        if (key[i] != ' ') {
-            if (find(matrix.begin(), matrix.end(), key[i]) == matrix.end()) {
-                matrix[k++] = key[i];
+// Hàm tìm vị trí của một ký tự trong ma trận
+viTri timViTri(char c)
+{
+    for(int i=0; i<5; i++){
+        for(int j=0; j<5; j++){
+            if(c == matran[i][j])
+            {
+                viTri p = {i, j}; // Tạo một viTri với hàng và cột tương ứng
+                return p; // Trả về vị trí tìm thấy
             }
         }
     }
-    return matrix;
-}
-pair<char, char> encode_pair(vector<char>& matrix, char a, char b) {
-    int index1, index2;
-    for (size_t i = 0; i < matrix.size(); ++i) {
-        if (matrix[i] == a) {
-            index1 = i;
-        }
-        if (matrix[i] == b) {
-            index2 = i;
-        }
-    }
-    int row1 = index1 / 5;
-    int col1 = index1 % 5;
-    int row2 = index2 / 5;
-    int col2 = index2 % 5;
-
-    if (row1 == row2) {
-        return make_pair(matrix[row1 * 5 + (col1 + 1) % 5], matrix[row2 * 5 + (col2 + 1) % 5]);
-    } else if (col1 == col2) {
-        return make_pair(matrix[((row1 + 1) % 5) * 5 + col1], matrix[((row2 + 1) % 5) * 5 + col2]);
-    } else {
-        return make_pair(matrix[row1 * 5 + col2], matrix[row2 * 5 + col1]);
-    }
-}
-pair<char, char> decode_pair(vector<char>& matrix, char a, char b) {
-    int index1, index2;
-    for (size_t i = 0; i < matrix.size(); ++i) {
-        if (matrix[i] == a) {
-            index1 = i;
-        }
-        if (matrix[i] == b) {
-            index2 = i;
-        }
-    }
-    int row1 = index1 / 5;
-    int col1 = index1 % 5;
-    int row2 = index2 / 5;
-    int col2 = index2 % 5;
-
-    if (row1 == row2) {
-        return make_pair(matrix[row1 * 5 + (col1 + 4) % 5], matrix[row2 * 5 + (col2 + 4) % 5]);
-    } else if (col1 == col2) {
-        return make_pair(matrix[((row1 + 4) % 5) * 5 + col1], matrix[((row2 + 4) % 5) * 5 + col2]);
-    } else {
-        return make_pair(matrix[row1 * 5 + col2], matrix[row2 * 5 + col1]);
-    }
 }
 
-string playfair_cipher(string text, string key, string mode) {
-    text.erase(remove(text.begin(), text.end(), ' '), text.end());
-    text.erase(remove(text.begin(), text.end(), 'J'), text.end());
-    transform(text.begin(), text.end(), text.begin(), ::toupper);
-    transform(key.begin(), key.end(), key.begin(), ::toupper);
-
-    vector<char> playfair_matrix = create_playfair_matrix(key);
-
-    string result = "";
-    if (mode == "encode") {
-        for (size_t i = 0; i < text.length(); i += 2) {
-            pair<char, char> encoded_pair = encode_pair(playfair_matrix, text[i], text[i + 1]);
-            result += encoded_pair.first;
-            result += encoded_pair.second;
-        }
-    } else if (mode == "decode") {
-        for (size_t i = 0; i < text.length(); i += 2) {
-            pair<char, char> decoded_pair = decode_pair(playfair_matrix, text[i], text[i + 1]);
-            result += decoded_pair.first;
-            result += decoded_pair.second;
-        }
-    } else {
-        return "Invalid mode";
-    }
-    return result;
-}
-void playpair(){
-	system("cls");
-	cout<<"Tao Ma Hay Giai Ma(T/G):";
-	char c;cin>>c;
-	if(c == 't'){
-		cout<<"Nhap Ma Can Tao: ";
-		string plaintext;
-		cin.ignore();
-		getline(cin,plaintext);
-		string key;
-		cout<<"Nhap Khoa: ";
-		cin.ignore();
-		getline(cin,key);
-		string encrypted_text = playfair_cipher(plaintext, key, "encode");
-    	cout << "Ma Tao La: " << encrypted_text << endl;
-	}
-	else{
-		cout<<"Nhap Ma Can Giai: ";
-		string plaintext;
-		cin.ignore();
-		getline(cin,plaintext);
-		string key;
-		cout<<"Nhap Khoa: ";
-		cin.ignore();
-		getline(cin,key);
-		string decrypted_text = playfair_cipher(plaintext, key, "decode");
-    	cout << "Ma Giai La: " << decrypted_text << endl;
-	}
-    getch(); 
-}
-//het
-string encryptCaesar(string plaintext, int shift) {
-  string ciphertext = "";
-  for (int i = 0; i < plaintext.length(); i++) {
-    char c = plaintext[i];
-    if (isalpha(c)) {
-      char base = (islower(c)) ? 'a' : 'A';
-      c = (c - base + shift) % 26 + base;
-    }
-    ciphertext += c;
-  }
-  return ciphertext;
-}
-
-string decryptCaesar(string ciphertext, int shift) {
-  return encryptCaesar(ciphertext, 26 - shift);
-}
-
-void casaesar() {
-	system("cls");
-	cout<<"Tao Ma Hay Giai Ma(T/G):";
-	char c;cin>>c;
-	if(c == 't'){
-		string message;
-		int shift;
-		cout << "Nhap chuoi can tao ma: ";
-		cin.ignore();
-		getline(cin, message);
-		cout << "Nhap so buoc di chuyen (shift): ";
-		cin >> shift;
-		string encryptedMessage = encryptCaesar(message, shift);
-		cout << "Chuoi da ma hoa: " << encryptedMessage << endl;
-	}
-	else{
-		string message;
-		int shift;
-		cout << "Nhap chuoi can ma hoa: ";
-		cin.ignore();
-		getline(cin, message);
-		cout << "Nhap so buoc di chuyen : ";
-		cin >> shift;
-		string decryptedMessage = decryptCaesar(message, shift);
-		cout << "Chuoi da giai ma la: " << decryptedMessage << endl;
-	}
-    getch(); 
-}
-//Viet xau s ra man hinh tai toa do (x,y) voi mau la color
-void Write(char *s,int x,int y, int color)
+// Hàm mã hóa bản mã
+string maMa(string banMa)
 {
-  textcolor(color);
-  gotoxy(x,y); cout<<s;
-  textcolor(15);
+    string baMaDuocMa = ""; // Chuỗi lưu trữ bản mã đã được mã hóa
+    for(int i=0; i<banMa.length(); i+=2)
+    {
+        viTri p1 = timViTri(banMa[i]); // Tìm vị trí của ký tự thứ nhất trong cặp
+        viTri p2 = timViTri(banMa[i+1]); // Tìm vị trí của ký tự thứ hai trong cặp
+        int x1 = p1.hang; int y1 = p1.cot;
+        int x2 = p2.hang; int y2 = p2.cot;
+        if( x1 == x2 ) // Nếu cặp ký tự cùng hàng
+        {
+            baMaDuocMa += matran[x1][(y1+1)%5]; // Ký tự thứ nhất trong cặp được mã hóa bằng cách dịch sang phải 1 vị trí
+            baMaDuocMa += matran[x2][(y2+1)%5]; // Ký tự thứ hai trong cặp được mã hóa bằng cách dịch sang phải 1 vị trí
+        }
+        else if( y1 == y2 ) // Nếu cặp ký tự cùng cột
+        {
+            baMaDuocMa += matran[ (x1+1)%5 ][ y1 ]; // Ký tự thứ nhất trong cặp được mã hóa bằng cách dịch xuống 1 vị trí
+            baMaDuocMa += matran[ (x2+1)%5 ][ y2 ]; // Ký tự thứ hai trong cặp được mã hóa bằng cách dịch xuống 1 vị trí
+        }
+        else // Nếu cặp ký tự không cùng hàng và không cùng cột
+        {
+            baMaDuocMa += matran[ x1 ][ y2 ]; // Ký tự thứ nhất trong cặp được mã hóa bằng ký tự ở vị trí của ký tự thứ hai
+            baMaDuocMa += matran[ x2 ][ y1 ]; // Ký tự thứ hai trong cặp được mã hóa bằng ký tự ở vị trí của ký tự thứ nhất
+        }
+    }
+    return baMaDuocMa;
 }
 
-void Khung(int x1,int y1,int x2,int y2)
-{ int x,y;
-  gotoxy(x1,y1); cout<<"�";
-  gotoxy(x2,y1); cout<<"�";
-  gotoxy(x1,y2); cout<<"�";
-  gotoxy(x2,y2); cout<<"�";
-  for(x=x1+1;x<x2;x++)
-  {
-	gotoxy(x,y1); cout<<"�";
-	gotoxy(x,y2); cout<<"�";
-  }
-  for(y=y1+1;y<y2;y++)
-  {
-	gotoxy(x1,y); cout<<"�";
-	gotoxy(x2,y); cout<<"�";
-  }
-}
-/*Tao ra menu tai toa do (x0,y0) voi n dong luu trong bien s
-chon: dong menu hien thoi (khac mau voi cac dong khac) */
-void Ve_menu(int x0,int y0,int chon,int n,char *s[])
+// Hàm giải mã bản mã đã được mã hóa
+string giaiMa(string banMaDuocMa)
 {
-  system("cls");
-  Khung(x0-2,y0-1,x0+30,y0+n);
-  for(int i=0;i<n;i++)
-	 if(i==chon) Write(s[i],x0,y0+i,CYAN);
-	 else Write(s[i],x0,y0+i,YELLOW);
-  Write("Copyright (c) 2024 by NGUYEN DUC LEN.",x0-4,y0+n+5,10);
+    string banMaGoc = ""; // Chuỗi lưu trữ bản mã gốc sau khi được giải mã
+    for(int i=0; i<banMaDuocMa.length(); i+=2) // i được tăng 2 để kiểm tra giá trị cặp
+    {
+        viTri p1 = timViTri(banMaDuocMa[i]); // Tìm vị trí của ký tự thứ nhất trong cặp
+        viTri p2 = timViTri(banMaDuocMa[i+1]); // Tìm vị trí của ký tự thứ hai trong cặp
+        int x1 = p1.hang; int y1 = p1.cot;
+        int x2 = p2.hang; int y2 = p2.cot;
+        if( x1 == x2 ) // Nếu cặp ký tự cùng hàng
+        {
+            banMaGoc += matran[x1][ --y1<0 ? 4: y1 ]; // Ký tự thứ nhất trong cặp được giải mã bằng cách dịch sang trái 1 vị trí
+            banMaGoc += matran[x2][ --y2<0 ? 4: y2 ]; // Ký tự thứ hai trong cặp được giải mã bằng cách dịch sang trái 1 vị trí
+        }
+        else if( y1 == y2 ) // Nếu cặp ký tự cùng cột
+        {
+            banMaGoc += matran[ --x1<0 ? 4: x1 ][y1]; // Ký tự thứ nhất trong cặp được giải mã bằng cách dịch lên 1 vị trí
+            banMaGoc += matran[ --x2<0 ? 4: x2 ][y2]; // Ký tự thứ hai trong cặp được giải mã bằng cách dịch lên 1 vị trí
+        }
+        else // Nếu cặp ký tự không cùng hàng và không cùng cột
+        {
+            banMaGoc += matran[ x1 ][ y2 ]; // Ký tự thứ nhất trong cặp được giải mã bằng ký tự ở vị trí của ký tự thứ hai
+            banMaGoc += matran[ x2 ][ y1 ]; // Ký tự thứ hai trong cặp được giải mã bằng ký tự ở vị trí của ký tự thứ nhất
+        }
+    }
+    return banMaGoc;
 }
 
 int main()
 {
-  char ch,*st[20]; //Ghi cac dong menu
-  system("cls");
-  st[0]="Tao Va Giai Ma Playfair.";
-  st[1]="Tao Va Giai Ma Caesar.";
-  st[2]="Thoat.";
-  
-  int x0=40,y0=5,chon=0,luuchon,sodong=3,ok=FALSE;
-  Ve_menu(x0,y0,chon,sodong,st);
-  do
-  {
-  ch=getch(); //Nhan mot phim
-  switch (ch)
-	{
-		case 72: //phim len
-			luuchon=chon;
-			chon--;
-			if(chon<0) chon=sodong-1;
-			Write(st[luuchon],x0,y0+luuchon,YELLOW);
-			Write(st[chon],x0,y0+chon,CYAN);
-			break;
-		case 80://phim xuong
-			luuchon=chon;
-			chon++;
-			if(chon==sodong) chon=0;
-			Write(st[luuchon],x0,y0+luuchon,YELLOW);
-			Write(st[chon],x0,y0+chon,CYAN);
-			break;
-		case 13: //phim ENTER
-		ok=TRUE; break;
-	}
-	if (ok==TRUE) //Neu phim ENTER duoc nhan
-	{
-	  switch (chon)
-		{
-		 case 0:
-			//Baitap0();
-			playpair();
-			Ve_menu(x0,y0,chon,sodong,st);
-			break;
-		 case 1:
-			casaesar();
-			Ve_menu(x0,y0,chon,sodong,st);
-			break;
-		 case 2: exit(0);
-		}
-	  ok=FALSE; //tra lai trang thai ENTER chua duoc nhan
-	}
-  }
-  while (ch!=27);//Nhan phim ESC de thoat khoi chuong trinh
+    string banMaGoc;
+    cout << "Ban Ma : "; cin >> banMaGoc; // Nhập bản mã gốc
+    string khoa;
+    cout<<"Nhap Khoa: "; cin >> khoa; // Nhập khóa
+    taoMatran(khoa); // Tạo ma trận từ khóa
+
+    // In ra ma trận
+    for(int k=0;k<5;k++)
+    {
+        for(int j=0;j<5;j++)
+        {
+            cout << matran[k][j] << " ";
+        }
+        cout << endl;
+    }
+
+    cout << "Ban Ma: " << banMaGoc << endl; // In ra bản mã gốc
+    string banMaDieuChinh = dieuChinhBanMa(banMaGoc); // Điều chỉnh bản mã để chuẩn bị mã hóa
+    cout << "Chinh Lai Ban Ma\t: " << banMaDieuChinh << endl; // In ra bản mã đã được điều chỉnh
+    string baMaDuocMa = maMa(banMaDieuChinh); // Mã hóa bản mã
+    cout << "Ma Duoc Tao \t: " << baMaDuocMa << endl; // In ra bản mã đã được mã hóa
+    string banMaGiaiMaDuoc = giaiMa(baMaDuocMa); // Giải mã bản mã đã được mã hóa
+    cout<< "Ma Duoc Giai Ma Lai \t: " << banMaGiaiMaDuoc << endl; // In ra bản mã đã được giải mã
 }
